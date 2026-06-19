@@ -5,15 +5,30 @@ using UnityEngine;
 
 public class PlayerRecoil : MonoBehaviour
 {
-    public static PlayerRecoil Instance;
+    public static PlayerRecoil Instance { get; private set; }
     float vertOffset = 0f;
     float horizOffset = 0f;
     public float recoverSpeed = 8f;
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else if (Instance != this) Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else if (Instance != this)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     void Update()

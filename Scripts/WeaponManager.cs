@@ -6,20 +6,29 @@ using System.Collections;
 
 public class WeaponManager : MonoBehaviour
 {
-    public WeaponInstance[] slots = new WeaponInstance[3]; // 0: 주,1:보조,2:근접
+    public WeaponInstance[] slots = new WeaponInstance[3];
     public Transform firePoint;
     public Camera playerCamera;
     public UIManager ui;
     public LayerMask hitMask;
-
+    
     bool isReloading = false;
 
     void Start()
     {
+        // 자동으로 필요한 컴포넌트 찾기
+        if (playerCamera == null) playerCamera = Camera.main;
+        if (ui == null) ui = UIManager.Instance;
+        if (firePoint == null) firePoint = transform.Find("FirePoint");
+        if (hitMask == 0) hitMask = LayerMask.GetMask("Default");
+
+        // 무기 초기화
         for (int i = 0; i < slots.Length; i++)
         {
-            if (slots[i] != null && slots[i].data != null) slots[i].Init();
-            else slots[i] = null;
+            if (slots[i] != null && slots[i].data != null)
+            {
+                slots[i].Init();
+            }
         }
 
         if (ui != null) ui.UpdateWeaponUI(slots);
@@ -29,6 +38,7 @@ public class WeaponManager : MonoBehaviour
     {
         if (playerCamera == null) return;
 
+        // 무기 선택
         if (Input.GetKeyDown(KeyCode.Alpha1)) EquipSlot(0);
         if (Input.GetKeyDown(KeyCode.Alpha2)) EquipSlot(1);
         if (Input.GetKeyDown(KeyCode.Alpha3)) EquipSlot(2);
@@ -36,25 +46,30 @@ public class WeaponManager : MonoBehaviour
         var current = GetCurrentWeapon();
         if (current == null || current.data == null) return;
 
+        // 조준 및 이동 상태 확인
         bool isADS = Input.GetMouseButton(1);
         bool isMoving = Mathf.Abs(Input.GetAxis("Horizontal")) > 0.01f || Mathf.Abs(Input.GetAxis("Vertical")) > 0.01f;
         float spread = current.data.baseSpread * (isADS ? 0.45f : 1f) * (isMoving ? 1.6f : 1f);
 
-        if (isReloading == false && (current.data.isAutomatic ? Input.GetButton("Fire1") : Input.GetButtonDown("Fire1")))
+        // 사격
+        if (!isReloading && (current.data.isAutomatic ? Input.GetButton("Fire1") : Input.GetButtonDown("Fire1")))
         {
             TryShoot(current, spread, isADS);
         }
 
+        // 재장전
         if (Input.GetKeyDown(KeyCode.R) && !isReloading)
         {
             StartCoroutine(Reload(current));
         }
 
+        // 사격 중단
         if (Input.GetButtonUp("Fire1"))
         {
             if (current != null) current.shotCount = 0;
         }
 
+        // UI 업데이트
         if (ui != null) ui.UpdateAmmoUI(current);
     }
 
@@ -76,7 +91,11 @@ public class WeaponManager : MonoBehaviour
     {
         if (w == null || w.data == null) return;
         if (Time.time - w.lastFireTime < 1f / Mathf.Max(0.0001f, w.data.fireRate)) return;
-        if (w.currentAmmo <= 0) { if (ui != null) ui.PlayEmptyClick(); return; }
+        if (w.currentAmmo <= 0)
+        {
+            if (ui != null) ui.PlayEmptyClick();
+            return;
+        }
 
         w.lastFireTime = Time.time;
         w.currentAmmo--;
@@ -86,6 +105,7 @@ public class WeaponManager : MonoBehaviour
         Vector3 dir = playerCamera.transform.forward;
         Vector3 finalDir = dir;
 
+        // 스프레이 패턴 적용
         if (w.data.sprayPattern != null && w.data.sprayPattern.offsets != null && w.data.sprayPattern.offsets.Length > 0)
         {
             Vector2 patternOffset = GetPatternOffset(w.data.sprayPattern, w.shotCount);
@@ -101,6 +121,7 @@ public class WeaponManager : MonoBehaviour
 
         finalDir = ApplyRandomSpread(finalDir, w.data.baseSpread * 0.05f);
 
+        // 사격 방식
         if (w.data.usesHitscan) FireHitscan(w, finalDir);
         else FireProjectile(w, finalDir);
 
@@ -128,8 +149,9 @@ public class WeaponManager : MonoBehaviour
 
     void FireHitscan(WeaponInstance w, Vector3 dir)
     {
-        if (firePoint == null) return;
-        if (Physics.Raycast(firePoint.position, dir, out RaycastHit hit, 2000f, hitMask))
+        if (playerCamera == null) return;
+        
+        if (Physics.Raycast(playerCamera.transform.position, dir, out RaycastHit hit, 2000f, hitMask))
         {
             var dmg = hit.collider.GetComponent<Damageable>();
             if (dmg != null)
@@ -146,9 +168,11 @@ public class WeaponManager : MonoBehaviour
     void FireProjectile(WeaponInstance w, Vector3 dir)
     {
         if (firePoint == null || w.data.bulletPrefab == null) return;
+        
         GameObject b = Instantiate(w.data.bulletPrefab, firePoint.position, Quaternion.LookRotation(dir));
         var rb = b.GetComponent<Rigidbody>();
         if (rb) rb.velocity = dir * w.data.bulletSpeed;
+        
         var bullet = b.GetComponent<Bullet>();
         if (bullet != null) bullet.Init(w.data.damageHead, w.data.damageBody, w.data.damageLeg, w.data);
     }
@@ -176,8 +200,10 @@ public class WeaponManager : MonoBehaviour
     void ApplyRecoil(WeaponInstance w)
     {
         if (w == null || w.data == null) return;
+        if (PlayerRecoil.Instance == null) return;
+        
         float v = w.data.recoilVertical * Random.Range(0.95f, 1.05f);
         float h = w.data.recoilHorizontal * Random.Range(-1f, 1f);
-        if (PlayerRecoil.Instance != null) PlayerRecoil.Instance.AddRecoil(v, h);
+        PlayerRecoil.Instance.AddRecoil(v, h);
     }
 }

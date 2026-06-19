@@ -12,19 +12,28 @@ public class Bullet : MonoBehaviour
 
     public void Init(int head, int body, int leg, WeaponData data)
     {
-        dmgHead = head; dmgBody = body; dmgLeg = leg; sourceWeapon = data;
+        dmgHead = head;
+        dmgBody = body;
+        dmgLeg = leg;
+        sourceWeapon = data;
         Destroy(gameObject, lifeTime);
     }
 
     void OnCollisionEnter(Collision col)
     {
+        if (col == null || col.collider == null) return;
+
         var hit = col.collider;
         int applied = dmgBody;
+        
         if (hit.CompareTag("Head")) applied = dmgHead;
         else if (hit.CompareTag("Leg")) applied = dmgLeg;
 
         var dmg = col.gameObject.GetComponent<Damageable>();
-        if (dmg != null) dmg.ApplyDamage(applied, sourceWeapon);
+        if (dmg != null && sourceWeapon != null)
+        {
+            dmg.ApplyDamage(applied, sourceWeapon);
+        }
 
         Destroy(gameObject);
     }
