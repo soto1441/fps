@@ -4,9 +4,15 @@
 
 ## 실행 방법
 
-1. Unity에서 이 프로젝트 폴더 열기
+### Unity 에디터에서
+1. Unity 6000.0.32f1 이상에서 이 프로젝트 폴더 열기
 2. Assets/Scenes/Game.unity 씬 열기
 3. Play 버튼 클릭
+
+### 웹 브라우저에서 (WebGL 자동 빌드)
+`main` 브랜치에 push되면 GitHub Actions가 WebGL로 빌드하여 GitHub Pages에 자동 배포합니다.
+이 기능을 사용하려면 저장소 Settings → Secrets에 `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`를 등록하고,
+Settings → Pages에서 Source를 "GitHub Actions"로 설정해야 합니다.
 
 ## 조작
 
